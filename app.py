@@ -63,7 +63,7 @@ if uploaded_file is not None:
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("#### 📷 البث الأصلي")
+        st.markdown("####             📷 ")
         st.image(image, use_container_width=True)
     
     if st.button("🚀 بدء فحص السلامة الآلي"):
@@ -116,7 +116,7 @@ if uploaded_file is not None:
             res_plotted_rgb = cv2.cvtColor(img_cv2, cv2.COLOR_BGR2RGB)
             
             with col2:
-                st.markdown("#### 🎯 الرصد الذكي (AI Output)")
+                st.markdown("####               🎯 ")
                 st.image(res_plotted_rgb, use_container_width=True)
             
             st.markdown("---")
