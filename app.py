@@ -4,15 +4,21 @@ from PIL import Image
 import cv2
 import numpy as np
 import io
-import datetime # مكتبة جديدة أضفناها لجلب الوقت والتاريخ للتقارير
+import datetime
+import zipfile # مكتبة جديدة لدمج الملفات في ملف ZIP واحد
 
 st.set_page_config(page_title="نظام السلامة الذكي | Smart Safety", page_icon="🛡️", layout="wide")
 
+# تم إصلاح الـ CSS لكي لا يخفي زر فتح القائمة الجانبية
 st.markdown("""
 <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    header {visibility: hidden;}
+    /* تم إزالة إخفاء الـ header بالكامل لكي يعمل سهم القائمة الجانبية، وتم إخفاء أزرار Streamlit العلوية فقط بدلاً من ذلك */
+    [data-testid="stHeader"] {background-color: transparent;}
+    .stApp > header {background-color: transparent;}
+    [data-testid="stToolbar"] {visibility: hidden;}
+    
     [data-testid="stMetric"] {
         background-color: #f0f2f6;
         border-radius: 10px;
@@ -29,30 +35,33 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ----------------- الميزة 3: دعم اللغتين -----------------
-# زر تغيير اللغة في القائمة الجانبية
+# ----------------- دعم اللغتين للواجهة -----------------
+st.sidebar.image("https://cdn-icons-png.flaticon.com/512/1973/1973805.png", width=80)
 lang = st.sidebar.radio("🌐 لغة النظام / System Language", ["العربية", "English"])
 
-# قاموس النصوص (يحتفظ بنصوصك الأصلية للعربية، ويترجمها للإنجليزية)
 if lang == "العربية":
     t = {
         "title": "🛡️ نظام الرصد الآلي للسلامة المهنية (Dual-AI)",
         "subtitle": "### تحليل هندسي متقاطع (IoA) لاكتشاف المخالفات المعقدة",
-        "upload": "🤖 قم برفع صورتك للتحليل الآلي  (JPG, PNG)...",
-        "btn_scan": ".. بدء الفحص ",
+        "upload": "🤖 قم برفع صورتك للتحليل الآلي (JPG, PNG)...",
+        "btn_scan": "🚀 بدء الفحص",
         "loading": "جاري إجراء العمليات الحسابية للتقاطعات الهندسية...",
-        "img_orig": "#### 📷 ",
-        "img_res": "#### 🎯 ",
+        "img_orig": "#### 📷 الصورة الأصلية",
+        "img_res": "#### 🎯 نتيجة الفحص الآلي",
         "report_title": "### 📊 تقرير شامل (مُحدث)",
-        "metric_helmet": "✅ يرتدي خوذة ",
-        "metric_vest": "🦺 يرتدي سترة ",
+        "metric_helmet": "✅ يرتدي خوذة",
+        "metric_vest": "🦺 يرتدي سترة",
         "metric_no_helmet": "❌ لا يرتدي خوذة",
         "metric_no_vest": "❌ لا يرتدي سترة",
         "alert_danger": "⚠️ **حالة طوارئ:** تم رصد ({}) بدون خوذة، و ({}) بدون سترة!",
         "alert_safe": "✅ **امتثال تام:** الموقع مطابق لاشتراطات السلامة.",
-        "btn_img_dl": "📥 تحميل الصورة",
-        "btn_rep_dl": "📄 تحميل التقرير الرسمي",
-        "index_title": "📈 مؤشر أمان الموقع (Site Safety Index)"
+        "btn_combined_dl": "📥 تحميل حزمة التقرير (صورة + تقرير نصي)",
+        "index_title": "📈 مؤشر أمان الموقع",
+        "sidebar_title": "⚙️ إعدادات النظام",
+        "sidebar_info": "يستخدم هذا النظام معمارية (Dual-Model) وحسابات (IoA) لضمان أعلى درجات الرصد.",
+        "adv_settings": "🛠️ إعدادات الحساسية المتقدمة",
+        "conf_person": "دقة رصد الأشخاص:",
+        "conf_ppe": "دقة رصد معدات السلامة:"
     }
 else:
     t = {
@@ -61,8 +70,8 @@ else:
         "upload": "🤖 Upload Site Image for AI Analysis (JPG, PNG)...",
         "btn_scan": "🚀 Start Scan",
         "loading": "Processing geometric intersections...",
-        "img_orig": "#### 📷 Original",
-        "img_res": "#### 🎯 AI Detection",
+        "img_orig": "#### 📷 Original Image",
+        "img_res": "#### 🎯 AI Detection Result",
         "report_title": "### 📊 Comprehensive Report",
         "metric_helmet": "✅ Helmet Compliant",
         "metric_vest": "🦺 Vest Compliant",
@@ -70,18 +79,24 @@ else:
         "metric_no_vest": "❌ No Vest",
         "alert_danger": "⚠️ **EMERGENCY:** Detected ({}) without helmet, and ({}) without vest!",
         "alert_safe": "✅ **100% COMPLIANT:** Site meets all safety standards.",
-        "btn_img_dl": "📥 Download Image",
-        "btn_rep_dl": "📄 Download Official Report",
-        "index_title": "📈 Site Safety Index"
+        "btn_combined_dl": "📥 Download Report Package (Image + Text)",
+        "index_title": "📈 Site Safety Index",
+        "sidebar_title": "⚙️ System Settings",
+        "sidebar_info": "System uses Dual-Model architecture & IoA math for high precision.",
+        "adv_settings": "🛠️ Advanced Sensitivity",
+        "conf_person": "Person Detection Confidence:",
+        "conf_ppe": "PPE Detection Confidence:"
     }
-# ---------------------------------------------------------
 
-st.sidebar.image("https://cdn-icons-png.flaticon.com/512/1973/1973805.png", width=80)
-st.sidebar.title("⚙️ إعدادات النظام المعمارية" if lang == "العربية" else "⚙️ Architecture Settings")
-st.sidebar.markdown("---")
-st.sidebar.info("يستخدم هذا النظام معمارية (Dual-Model) وحسابات (IoA) الدقيقة لضمان أعلى درجات الرصد المتقاطع." if lang == "العربية" else "System uses Dual-Model architecture & IoA math for high precision.")
-person_conf = st.sidebar.slider("دقة رصد الأشخاص (البشر):" if lang == "العربية" else "Person Detection Confidence:", 0.1, 1.0, 0.30, 0.05)
-ppe_conf = st.sidebar.slider("دقة رصد معدات السلامة:" if lang == "العربية" else "PPE Detection Confidence:", 0.1, 1.0, 0.40, 0.05)
+# ----------------- تصميم القائمة الجانبية الاحترافي -----------------
+st.sidebar.title(t["sidebar_title"])
+st.sidebar.info(t["sidebar_info"])
+
+# وضع الإعدادات المعقدة داخل قائمة منسدلة لترتيب شكل الشريط الجانبي
+with st.sidebar.expander(t["adv_settings"]):
+    person_conf = st.slider(t["conf_person"], 0.1, 1.0, 0.30, 0.05)
+    ppe_conf = st.slider(t["conf_ppe"], 0.1, 1.0, 0.40, 0.05)
+
 st.sidebar.markdown("---")
 
 @st.cache_resource
@@ -188,7 +203,6 @@ if uploaded_file is not None:
 
             st.markdown("---")
             
-            # ----------------- الميزة 1: مؤشر خطورة الموقع -----------------
             total_workers = len(persons_results[0].boxes)
             if total_workers > 0:
                 total_violations = no_helmet_count + no_vest_count
@@ -200,7 +214,6 @@ if uploaded_file is not None:
                 
             st.markdown(f"#### {t['index_title']} : {safety_percentage}%")
             st.progress(safety_percentage / 100)
-            # -------------------------------------------------------------
 
             st.markdown(t["report_title"])
 
@@ -215,32 +228,61 @@ if uploaded_file is not None:
             else:
                 st.success(t["alert_safe"])
 
-            # ----------------- الميزة 2: توليد التقرير الرسمي -----------------
+            # ----------------- التقرير النصي الديناميكي و دمج الملفات في ZIP -----------------
             now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            report_text = f"""
-            ========================================
-             OFFICIAL HSE SITE SAFETY REPORT
-            ========================================
-            Date & Time : {now}
-            Safety Index: {safety_percentage}%
-            ----------------------------------------
-            Total Workers Detected : {total_workers}
-            Compliant Helmets      : {helmet_count}
-            Compliant Vests        : {vest_count}
-            Helmet Violations      : {no_helmet_count}
-            Vest Violations        : {no_vest_count}
-            ========================================
-            System: Dual-AI IoA Architecture
-            """
             
-            # أزرار التحميل جنباً إلى جنب
-            dl_col1, dl_col2 = st.columns(2)
+            # تحديد لغة التقرير النصي حسب اختيار المستخدم
+            if lang == "العربية":
+                report_text = f"""
+                ========================================
+                 تقرير الامتثال لمعايير السلامة المهنية
+                ========================================
+                التاريخ والوقت : {now}
+                مؤشر أمان الموقع: {safety_percentage}%
+                ----------------------------------------
+                إجمالي العمال المرصودين : {total_workers}
+                خوذ مطابقة للاشتراطات : {helmet_count}
+                سترات مطابقة للاشتراطات : {vest_count}
+                مخالفات عدم ارتداء خوذة : {no_helmet_count}
+                مخالفات عدم ارتداء سترة : {no_vest_count}
+                ========================================
+                النظام: الذكاء الاصطناعي المزدوج (Dual-AI)
+                """
+            else:
+                report_text = f"""
+                ========================================
+                 OFFICIAL HSE SITE SAFETY REPORT
+                ========================================
+                Date & Time : {now}
+                Safety Index: {safety_percentage}%
+                ----------------------------------------
+                Total Workers Detected : {total_workers}
+                Compliant Helmets      : {helmet_count}
+                Compliant Vests        : {vest_count}
+                Helmet Violations      : {no_helmet_count}
+                Vest Violations        : {no_vest_count}
+                ========================================
+                System: Dual-AI IoA Architecture
+                """
             
-            is_success, buffer = cv2.imencode(".jpg", cv2.cvtColor(res_plotted_rgb, cv2.COLOR_RGB2BGR))
-            io_buf = io.BytesIO(buffer)
-            with dl_col1:
-                st.download_button(label=t["btn_img_dl"], data=io_buf, file_name="safety_image.jpg", mime="image/jpeg")
+            # تحويل الصورة إلى بايتات
+            is_success, img_buffer = cv2.imencode(".jpg", cv2.cvtColor(res_plotted_rgb, cv2.COLOR_RGB2BGR))
             
-            with dl_col2:
-                st.download_button(label=t["btn_rep_dl"], data=report_text, file_name="HSE_Report.txt", mime="text/plain")
-            # -----------------------------------------------------------------
+            # إنشاء ملف ZIP في الذاكرة الوهمية (Memory)
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+                # إضافة الصورة داخل ملف الـ ZIP
+                zip_file.writestr("AI_Detection_Image.jpg", img_buffer.tobytes())
+                # إضافة التقرير النصي داخل ملف الـ ZIP (مع ترميز utf-8 ليدعم العربي)
+                zip_file.writestr("Safety_Report.txt", report_text.encode('utf-8'))
+            
+            # زر واحد أنيق ومدمج بالمنتصف
+            col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
+            with col_btn2:
+                st.download_button(
+                    label=t["btn_combined_dl"],
+                    data=zip_buffer.getvalue(),
+                    file_name="HSE_Report_Package.zip",
+                    mime="application/zip",
+                    use_container_width=True # لتكبير الزر وجعله بارزاً
+                )
