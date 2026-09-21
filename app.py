@@ -5,7 +5,6 @@ import cv2
 import numpy as np
 import io
 
-# 1. إعدادات الصفحة
 st.set_page_config(page_title="نظام السلامة الذكي | Smart Safety", page_icon="🛡️", layout="wide")
 
 st.markdown("""
@@ -29,49 +28,42 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 2. تصميم الشريط الجانبي
 st.sidebar.image("https://cdn-icons-png.flaticon.com/512/1973/1973805.png", width=80)
 st.sidebar.title("⚙️ إعدادات النظام المعمارية")
 st.sidebar.markdown("---")
-st.sidebar.info("يستخدم هذا النظام معمارية (Dual-Model) لضمان أعلى درجات الدقة في الرصد المتقاطع.")
-person_conf = st.sidebar.slider("دقة رصد الأشخاص (البشر):", 0.1, 1.0, 0.40, 0.05)
+st.sidebar.info("يستخدم هذا النظام معمارية (Dual-Model) وحسابات (IoA) الدقيقة لضمان أعلى درجات الرصد المتقاطع.")
+person_conf = st.sidebar.slider("دقة رصد الأشخاص (البشر):", 0.1, 1.0, 0.30, 0.05)
 ppe_conf = st.sidebar.slider("دقة رصد معدات السلامة:", 0.1, 1.0, 0.40, 0.05)
 st.sidebar.markdown("---")
 
-# 3. تحميل العقلين (النماذج)
 @st.cache_resource
 def load_models():
-    # العقل الأول: النموذج العالمي لرصد البشر (سيتم تحميله تلقائياً)
     person_model = YOLO("yolov8n.pt")
-    # العقل الثاني: نموذجك المتخصص في السلامة
     ppe_model = YOLO("best.pt")
     return person_model, ppe_model
 
 person_model, ppe_model = load_models()
 
 st.title("🛡️ نظام الرصد المزدوج للسلامة المهنية (Dual-AI)")
-st.markdown("### تحليل متقاطع لاكتشاف غياب السترات والخوذ بدقة متناهية")
+st.markdown("### تحليل هندسي متقاطع (IoA) لاكتشاف المخالفات المعقدة")
 st.markdown("---")
 
-uploaded_file = st.file_uploader(" قم برفع صورتك للتحليل الآلي (JPG, PNG)...", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("📂 قم برفع صورة العمال للتحليل (JPG, PNG)...", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
     image = Image.open(uploaded_file)
     
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown("#### 📷 ")
+        st.markdown("#### 📷 البث الأصلي")
         st.image(image, use_container_width=True)
     
-    if st.button("🚀 بدء الفحص المزدوج (Cross-Validation)"):
-        with st.spinner('جاري تشغيل معمارية النماذج المزدوجة...'):
+    if st.button("🚀 بدء الفحص المزدوج الدقيق"):
+        with st.spinner('جاري إجراء العمليات الحسابية للتقاطعات الهندسية...'):
             img_array = np.array(image)
             img_cv2 = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
             
-            # تشغيل العقل الأول (للبحث عن الأشخاص فقط - الكلاس رقم 0)
             persons_results = person_model.predict(img_cv2, classes=[0], conf=person_conf)
-            
-            # تشغيل العقل الثاني (للبحث عن المعدات)
             ppe_results = ppe_model.predict(img_cv2, conf=ppe_conf)
             names = ppe_model.names
             
@@ -80,10 +72,8 @@ if uploaded_file is not None:
             vest_count = 0
             no_vest_count = 0
             
-            # قائمة لحفظ إحداثيات السترات عشان نقارنها بالأشخاص لاحقاً
             vest_boxes = []
 
-            # رسم الخوذ والسترات من نموذجك
             for box in ppe_results[0].boxes:
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
                 conf = float(box.conf[0])
@@ -100,7 +90,7 @@ if uploaded_file is not None:
                     text_color = (0, 0, 0)
                     vest_count += 1
                     display_name = "Vest"
-                    vest_boxes.append((x1, y1, x2, y2)) # حفظ إحداثيات السترة
+                    vest_boxes.append((x1, y1, x2, y2))
                 elif label_name == "not_helmet":
                     color = (0, 0, 255)
                     text_color = (255, 255, 255)
@@ -109,34 +99,34 @@ if uploaded_file is not None:
                 else:
                     continue
                     
-                # رسم معدات السلامة
                 cv2.rectangle(img_cv2, (x1, y1), (x2, y2), color, 2)
                 label = f"{display_name} {conf:.2f}"
                 t_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)[0]
                 cv2.rectangle(img_cv2, (x1, y1 - t_size[1] - 8), (x1 + t_size[0] + 5, y1), color, -1)
                 cv2.putText(img_cv2, label, (x1 + 2, y1 - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.6, text_color, 2)
 
-            # الخوارزمية الذكية: فحص الأشخاص لمعرفة من لا يرتدي سترة
+            # الخوارزمية الهندسية الدقيقة (Intersection over Area)
             for p_box in persons_results[0].boxes:
                 px1, py1, px2, py2 = map(int, p_box.xyxy[0])
                 
                 has_vest = False
                 for (vx1, vy1, vx2, vy2) in vest_boxes:
-                    # حساب التقاطع بين مربع الشخص ومربع السترة
                     ix1 = max(px1, vx1)
                     iy1 = max(py1, vy1)
                     ix2 = min(px2, vx2)
                     iy2 = min(py2, vy2)
                     
-                    # إذا كان هناك تقاطع فعلي، يعني الشخص لابس سترة
                     if ix1 < ix2 and iy1 < iy2:
-                        has_vest = True
-                        break
+                        inter_area = (ix2 - ix1) * (iy2 - iy1)
+                        vest_area = (vx2 - vx1) * (vy2 - vy1)
+                        # الشرط الجديد: يجب أن يكون 50% من السترة داخل مربع الشخص
+                        if vest_area > 0 and (inter_area / vest_area) > 0.5:
+                            has_vest = True
+                            break
                 
-                # إذا الشخص ما عليه سترة، ارسم مربع أحمر حوله واكتب NO VEST
                 if not has_vest:
                     no_vest_count += 1
-                    color = (0, 0, 255) # أحمر
+                    color = (0, 0, 255) 
                     cv2.rectangle(img_cv2, (px1, py1), (px2, py2), color, 3)
                     
                     label = "NO VEST!"
@@ -147,13 +137,12 @@ if uploaded_file is not None:
             res_plotted_rgb = cv2.cvtColor(img_cv2, cv2.COLOR_BGR2RGB)
             
             with col2:
-                st.markdown("#### 🎯 ")
+                st.markdown("#### 🎯 الرصد الذكي المتقاطع")
                 st.image(res_plotted_rgb, use_container_width=True)
             
             st.markdown("---")
             st.markdown("### 📊 تقرير الامتثال اللحظي (مُحدث)")
             
-            # عرض 4 إحصائيات بدلاً من 3
             stat_col1, stat_col2, stat_col3, stat_col4 = st.columns(4)
             stat_col1.metric(label="✅ خوذة مطابقة", value=helmet_count)
             stat_col2.metric(label="🦺 سترة مطابقة", value=vest_count)
