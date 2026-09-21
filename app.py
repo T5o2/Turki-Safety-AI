@@ -7,14 +7,17 @@ import io
 import datetime
 import zipfile
 
+# 1. إعدادات الصفحة
 st.set_page_config(page_title="نظام السلامة الذكي | Smart Safety", page_icon="🛡️", layout="wide")
 
-# تم تنظيف أكواد CSS وإزالة ما يسبب اختفاء الأزرار
+# 2. تنظيف الواجهة برمجياً وإخفاء القوائم الافتراضية
 st.markdown("""
 <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    [data-testid="stHeader"] {visibility: hidden;}
     
+    /* تصميم بطاقات الإحصائيات */
     [data-testid="stMetric"] {
         background-color: #f0f2f6;
         border-radius: 10px;
@@ -28,24 +31,31 @@ st.markdown("""
             border-left: 5px solid #4da6ff;
         }
     }
+    
+    /* رفع محتوى الصفحة للأعلى قليلاً لتغطية الفراغ الذي تركه إخفاء الهيدر */
+    .block-container {
+        padding-top: 2rem !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# ----------------- لوحة الإعدادات العلوية (بديل القائمة الجانبية) -----------------
-with st.expander("⚙️ إعدادات النظام واللغة | System Settings & Language", expanded=False):
-    # تغيير اللغة
-    lang = st.radio("🌐 لغة الواجهة / Interface Language:", ["العربية", "English"], horizontal=True)
-    st.markdown("---")
-    
-    # إعدادات الحساسية بجوار بعضها
-    col_s1, col_s2 = st.columns(2)
-    with col_s1:
-        person_conf = st.slider("دقة رصد الأشخاص | Person Conf:", 0.1, 1.0, 0.30, 0.05)
-    with col_s2:
-        ppe_conf = st.slider("دقة رصد معدات السلامة | PPE Conf:", 0.1, 1.0, 0.40, 0.05)
-# ---------------------------------------------------------------------------------
+# ----------------- لوحة الإعدادات العائمة الأنيقة (الميزة الجديدة) -----------------
+# وضع أيقونة الإعدادات في أقصى اليسار العلوي باستخدام الأعمدة
+col_settings, col_empty = st.columns([1, 10])
 
-# قاموس الترجمة بناءً على اختيار المستخدم
+with col_settings:
+    # استخدام st.popover لإنشاء قائمة عائمة تفتح عند الضغط على الأيقونة
+    with st.popover("⚙️ إعدادات النظام", help="اضغط لتعديل دقة الرصد واللغة"):
+        st.markdown("**🌐 لغة الواجهة**")
+        lang = st.radio("Language:", ["العربية", "English"], horizontal=True, label_visibility="collapsed")
+        
+        st.markdown("---")
+        st.markdown("**🛠️ حساسية الذكاء الاصطناعي**")
+        person_conf = st.slider("رصد الأشخاص (Person):", 0.1, 1.0, 0.30, 0.05)
+        ppe_conf = st.slider("رصد المعدات (PPE):", 0.1, 1.0, 0.40, 0.05)
+# -----------------------------------------------------------------------------------
+
+# 4. قاموس الترجمة التفاعلي
 if lang == "العربية":
     t = {
         "title": "🛡️ نظام الرصد الآلي للسلامة المهنية (Dual-AI)",
@@ -85,6 +95,7 @@ else:
         "index_title": "📈 Site Safety Index"
     }
 
+# 5. تحميل النماذج (Cached)
 @st.cache_resource
 def load_models():
     person_model = YOLO("yolov8n.pt")
@@ -93,6 +104,7 @@ def load_models():
 
 person_model, ppe_model = load_models()
 
+# 6. بناء الواجهة الرئيسية
 st.title(t["title"])
 st.markdown(t["subtitle"])
 st.markdown("---")
@@ -120,7 +132,6 @@ if uploaded_file is not None:
             no_helmet_count = 0
             vest_count = 0
             no_vest_count = 0
-
             vest_boxes = []
 
             for box in ppe_results[0].boxes:
@@ -156,8 +167,8 @@ if uploaded_file is not None:
 
             for p_box in persons_results[0].boxes:
                 px1, py1, px2, py2 = map(int, p_box.xyxy[0])
-
                 has_vest = False
+                
                 for (vx1, vy1, vx2, vy2) in vest_boxes:
                     ix1 = max(px1, vx1)
                     iy1 = max(py1, vy1)
@@ -189,6 +200,7 @@ if uploaded_file is not None:
 
             st.markdown("---")
             
+            # 7. حساب المؤشر وعرض النتائج
             total_workers = len(persons_results[0].boxes)
             if total_workers > 0:
                 total_violations = no_helmet_count + no_vest_count
@@ -214,6 +226,7 @@ if uploaded_file is not None:
             else:
                 st.success(t["alert_safe"])
 
+            # 8. توليد التقرير وملف الـ ZIP للتحميل
             now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             
             if lang == "العربية":
