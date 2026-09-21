@@ -7,10 +7,8 @@ import io
 import datetime
 import zipfile
 
-# 1. إعدادات الصفحة
 st.set_page_config(page_title="نظام السلامة الذكي | Smart Safety", page_icon="🛡️", layout="wide")
 
-# 2. تنظيف الواجهة برمجياً وإخفاء القوائم الافتراضية
 st.markdown("""
 <style>
     #MainMenu {visibility: hidden;}
@@ -37,11 +35,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. الحل الاحترافي: تهيئة "ذاكرة الموقع" لحفظ اللغة المحددة
 if "lang" not in st.session_state:
     st.session_state.lang = "العربية"
 
-# 4. قاموس الترجمة الشامل (بما في ذلك الإعدادات)
 if st.session_state.lang == "العربية":
     t = {
         "pop_title": "⚙️ إعدادات النظام",
@@ -93,13 +89,11 @@ else:
         "index_title": "📈 Site Safety Index"
     }
 
-# 5. لوحة الإعدادات العائمة (تستخدم القاموس وتُحدّث الذاكرة تلقائياً)
 col_settings, col_empty = st.columns([1, 10])
 
 with col_settings:
     with st.popover(t["pop_title"], help=t["pop_help"]):
         st.markdown(t["pop_lang"])
-        # المفتاح key="lang" يربط الزر بذاكرة الموقع مباشرة
         st.radio("Language:", ["العربية", "English"], horizontal=True, label_visibility="collapsed", key="lang")
         
         st.markdown("---")
@@ -107,7 +101,6 @@ with col_settings:
         person_conf = st.slider(t["pop_person"], 0.1, 1.0, 0.30, 0.05)
         ppe_conf = st.slider(t["pop_ppe"], 0.1, 1.0, 0.40, 0.05)
 
-# 6. تحميل النماذج (Cached)
 @st.cache_resource
 def load_models():
     person_model = YOLO("yolov8n.pt")
@@ -116,7 +109,6 @@ def load_models():
 
 person_model, ppe_model = load_models()
 
-# 7. بناء الواجهة الرئيسية
 st.title(t["title"])
 st.markdown(t["subtitle"])
 st.markdown("---")
@@ -212,7 +204,6 @@ if uploaded_file is not None:
 
             st.markdown("---")
             
-            # 8. حساب المؤشر وعرض النتائج
             total_workers = len(persons_results[0].boxes)
             if total_workers > 0:
                 total_violations = no_helmet_count + no_vest_count
@@ -238,7 +229,6 @@ if uploaded_file is not None:
             else:
                 st.success(t["alert_safe"])
 
-            # 9. توليد التقرير وملف الـ ZIP للتحميل
             now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             
             if st.session_state.lang == "العربية":
