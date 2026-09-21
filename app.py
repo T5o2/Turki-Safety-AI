@@ -141,7 +141,7 @@ if uploaded_file is not None:
                 st.image(res_plotted_rgb, use_container_width=True)
             
             st.markdown("---")
-            st.markdown("### 📊 تقرير الامتثال اللحظي (مُحدث)")
+            st.markdown("### 📊 تقرير شامل (مُحدث)")
             
             stat_col1, stat_col2, stat_col3, stat_col4 = st.columns(4)
             stat_col1.metric(label="✅ يرتدي خوذة ", value=helmet_count)
