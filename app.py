@@ -21,7 +21,7 @@ uploaded_file = st.file_uploader("قم برفع صورة العامل هنا..."
 
 if uploaded_file is not None:
     image = Image.open(uploaded_file)
-    st.image(image, caption="الصورة المرفوعة", use_column_width=True)
+    st.image(image, caption="الصورة المرفوعة", use_container_width=True)
     
     if st.button("فحص السلامة 🔍"):
         with st.spinner('جاري التحليل...'):
@@ -57,4 +57,4 @@ if uploaded_file is not None:
             # عرض النتيجة
             res_plotted_rgb = cv2.cvtColor(img_cv2, cv2.COLOR_BGR2RGB)
             st.success("تم الفحص بنجاح!")
-            st.image(res_plotted_rgb, caption=" النتيجة النهائية بعد التحليل ", use_column_width=True)
+            st.image(res_plotted_rgb, caption=" النتيجة النهائية بعد التحليل ", use_container_width=True)
