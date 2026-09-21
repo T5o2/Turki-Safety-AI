@@ -7,7 +7,7 @@ import numpy as np
 # تصميم واجهة الموقع
 st.set_page_config(page_title="نظام السلامة الذكي", page_icon="👷")
 st.title("👷 نظام الرصد الذكي للسلامة المهنية")
-st.write("هذا النظام مدعوم بالذكاء الاصطناعي للتحقق من التزام العمال بارتداء معدات السلامة، وهو مصمم ليناسب معايير الشركات الكبرى مثل أرامكو وسدايا.")
+st.write(" هذا النظام مدعوم بالذكاء الاصطناعي للتحقق من التزام العمال بارتداء معدات السلامة.")
 
 # تحميل النموذج
 @st.cache_resource
@@ -57,4 +57,4 @@ if uploaded_file is not None:
             # عرض النتيجة
             res_plotted_rgb = cv2.cvtColor(img_cv2, cv2.COLOR_BGR2RGB)
             st.success("تم الفحص بنجاح!")
-            st.image(res_plotted_rgb, caption="النتيجة النهائية بعد تحليل الذكاء الاصطناعي", use_column_width=True)
+            st.image(res_plotted_rgb, caption=" النتيجة النهائية بعد التحليل ", use_column_width=True)
