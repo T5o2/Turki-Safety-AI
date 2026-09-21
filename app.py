@@ -44,21 +44,21 @@ def load_models():
 
 person_model, ppe_model = load_models()
 
-st.title("🛡️ نظام الرصد المزدوج للسلامة المهنية (Dual-AI)")
+st.title("🛡️ نظام الرصد الآلي للسلامة المهنية (Dual-AI)")
 st.markdown("### تحليل هندسي متقاطع (IoA) لاكتشاف المخالفات المعقدة")
 st.markdown("---")
 
-uploaded_file = st.file_uploader("📂 قم برفع صورة العمال للتحليل (JPG, PNG)...", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("🤖 قم برفع صورتك للتحليل الآلي  (JPG, PNG)...", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
     image = Image.open(uploaded_file)
     
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown("#### 📷 البث الأصلي")
+        st.markdown("#### 📷 ")
         st.image(image, use_container_width=True)
     
-    if st.button("🚀 بدء الفحص المزدوج الدقيق"):
+    if st.button(".. بدء الفحص "):
         with st.spinner('جاري إجراء العمليات الحسابية للتقاطعات الهندسية...'):
             img_array = np.array(image)
             img_cv2 = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
@@ -137,17 +137,17 @@ if uploaded_file is not None:
             res_plotted_rgb = cv2.cvtColor(img_cv2, cv2.COLOR_BGR2RGB)
             
             with col2:
-                st.markdown("#### 🎯 الرصد الذكي المتقاطع")
+                st.markdown("#### 🎯 ")
                 st.image(res_plotted_rgb, use_container_width=True)
             
             st.markdown("---")
             st.markdown("### 📊 تقرير الامتثال اللحظي (مُحدث)")
             
             stat_col1, stat_col2, stat_col3, stat_col4 = st.columns(4)
-            stat_col1.metric(label="✅ خوذة مطابقة", value=helmet_count)
-            stat_col2.metric(label="🦺 سترة مطابقة", value=vest_count)
-            stat_col3.metric(label="❌ بدون خوذة", value=no_helmet_count)
-            stat_col4.metric(label="❌ بدون سترة", value=no_vest_count)
+            stat_col1.metric(label="✅ يرتدي خوذة ", value=helmet_count)
+            stat_col2.metric(label="🦺 يرتدي سترة ", value=vest_count)
+            stat_col3.metric(label="❌ لا يرتدي خوذة", value=no_helmet_count)
+            stat_col4.metric(label="❌ لا يرتدي سترة", value=no_vest_count)
             
             if no_helmet_count > 0 or no_vest_count > 0:
                 st.error(f"⚠️ **حالة طوارئ:** تم رصد ({no_helmet_count}) بدون خوذة، و ({no_vest_count}) بدون سترة!")
