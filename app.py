@@ -17,7 +17,6 @@ st.markdown("""
     footer {visibility: hidden;}
     [data-testid="stHeader"] {visibility: hidden;}
     
-    /* تصميم بطاقات الإحصائيات */
     [data-testid="stMetric"] {
         background-color: #f0f2f6;
         border-radius: 10px;
@@ -32,32 +31,25 @@ st.markdown("""
         }
     }
     
-    /* رفع محتوى الصفحة للأعلى قليلاً لتغطية الفراغ الذي تركه إخفاء الهيدر */
     .block-container {
         padding-top: 2rem !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# ----------------- لوحة الإعدادات العائمة الأنيقة (الميزة الجديدة) -----------------
-# وضع أيقونة الإعدادات في أقصى اليسار العلوي باستخدام الأعمدة
-col_settings, col_empty = st.columns([1, 10])
+# 3. الحل الاحترافي: تهيئة "ذاكرة الموقع" لحفظ اللغة المحددة
+if "lang" not in st.session_state:
+    st.session_state.lang = "العربية"
 
-with col_settings:
-    # استخدام st.popover لإنشاء قائمة عائمة تفتح عند الضغط على الأيقونة
-    with st.popover("⚙️ إعدادات النظام", help="اضغط لتعديل دقة الرصد واللغة"):
-        st.markdown("**🌐 لغة الواجهة**")
-        lang = st.radio("Language:", ["العربية", "English"], horizontal=True, label_visibility="collapsed")
-        
-        st.markdown("---")
-        st.markdown("**🛠️ حساسية الذكاء الاصطناعي**")
-        person_conf = st.slider("رصد الأشخاص (Person):", 0.1, 1.0, 0.30, 0.05)
-        ppe_conf = st.slider("رصد المعدات (PPE):", 0.1, 1.0, 0.40, 0.05)
-# -----------------------------------------------------------------------------------
-
-# 4. قاموس الترجمة التفاعلي
-if lang == "العربية":
+# 4. قاموس الترجمة الشامل (بما في ذلك الإعدادات)
+if st.session_state.lang == "العربية":
     t = {
+        "pop_title": "⚙️ إعدادات النظام",
+        "pop_help": "اضغط لتعديل دقة الرصد واللغة",
+        "pop_lang": "**🌐 لغة الواجهة**",
+        "pop_ai": "**🛠️ حساسية الذكاء الاصطناعي**",
+        "pop_person": "رصد الأشخاص (Person):",
+        "pop_ppe": "رصد المعدات (PPE):",
         "title": "🛡️ نظام الرصد الآلي للسلامة المهنية (Dual-AI)",
         "subtitle": "### تحليل هندسي متقاطع (IoA) لاكتشاف المخالفات المعقدة",
         "upload": "🤖 قم برفع صورتك للتحليل الآلي (JPG, PNG)...",
@@ -77,6 +69,12 @@ if lang == "العربية":
     }
 else:
     t = {
+        "pop_title": "⚙️ System Settings",
+        "pop_help": "Click to adjust detection confidence and language",
+        "pop_lang": "**🌐 Interface Language**",
+        "pop_ai": "**🛠️ AI Sensitivity**",
+        "pop_person": "Person Detection (Conf):",
+        "pop_ppe": "PPE Detection (Conf):",
         "title": "🛡️ Automated HSE Monitoring System (Dual-AI)",
         "subtitle": "### IoA Cross-Validation for Complex Violations",
         "upload": "🤖 Upload Site Image for AI Analysis (JPG, PNG)...",
@@ -95,7 +93,21 @@ else:
         "index_title": "📈 Site Safety Index"
     }
 
-# 5. تحميل النماذج (Cached)
+# 5. لوحة الإعدادات العائمة (تستخدم القاموس وتُحدّث الذاكرة تلقائياً)
+col_settings, col_empty = st.columns([1, 10])
+
+with col_settings:
+    with st.popover(t["pop_title"], help=t["pop_help"]):
+        st.markdown(t["pop_lang"])
+        # المفتاح key="lang" يربط الزر بذاكرة الموقع مباشرة
+        st.radio("Language:", ["العربية", "English"], horizontal=True, label_visibility="collapsed", key="lang")
+        
+        st.markdown("---")
+        st.markdown(t["pop_ai"])
+        person_conf = st.slider(t["pop_person"], 0.1, 1.0, 0.30, 0.05)
+        ppe_conf = st.slider(t["pop_ppe"], 0.1, 1.0, 0.40, 0.05)
+
+# 6. تحميل النماذج (Cached)
 @st.cache_resource
 def load_models():
     person_model = YOLO("yolov8n.pt")
@@ -104,7 +116,7 @@ def load_models():
 
 person_model, ppe_model = load_models()
 
-# 6. بناء الواجهة الرئيسية
+# 7. بناء الواجهة الرئيسية
 st.title(t["title"])
 st.markdown(t["subtitle"])
 st.markdown("---")
@@ -200,7 +212,7 @@ if uploaded_file is not None:
 
             st.markdown("---")
             
-            # 7. حساب المؤشر وعرض النتائج
+            # 8. حساب المؤشر وعرض النتائج
             total_workers = len(persons_results[0].boxes)
             if total_workers > 0:
                 total_violations = no_helmet_count + no_vest_count
@@ -226,10 +238,10 @@ if uploaded_file is not None:
             else:
                 st.success(t["alert_safe"])
 
-            # 8. توليد التقرير وملف الـ ZIP للتحميل
+            # 9. توليد التقرير وملف الـ ZIP للتحميل
             now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             
-            if lang == "العربية":
+            if st.session_state.lang == "العربية":
                 report_text = f"""
                 ========================================
                  تقرير الامتثال لمعايير السلامة المهنية
