@@ -5,19 +5,15 @@ import cv2
 import numpy as np
 import io
 import datetime
-import zipfile # مكتبة جديدة لدمج الملفات في ملف ZIP واحد
+import zipfile
 
 st.set_page_config(page_title="نظام السلامة الذكي | Smart Safety", page_icon="🛡️", layout="wide")
 
-# تم إصلاح الـ CSS لكي لا يخفي زر فتح القائمة الجانبية
+# تم تنظيف أكواد CSS وإزالة ما يسبب اختفاء الأزرار
 st.markdown("""
 <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    /* تم إزالة إخفاء الـ header بالكامل لكي يعمل سهم القائمة الجانبية، وتم إخفاء أزرار Streamlit العلوية فقط بدلاً من ذلك */
-    [data-testid="stHeader"] {background-color: transparent;}
-    .stApp > header {background-color: transparent;}
-    [data-testid="stToolbar"] {visibility: hidden;}
     
     [data-testid="stMetric"] {
         background-color: #f0f2f6;
@@ -35,10 +31,21 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ----------------- دعم اللغتين للواجهة -----------------
-st.sidebar.image("https://cdn-icons-png.flaticon.com/512/1973/1973805.png", width=80)
-lang = st.sidebar.radio("🌐 لغة النظام / System Language", ["العربية", "English"])
+# ----------------- لوحة الإعدادات العلوية (بديل القائمة الجانبية) -----------------
+with st.expander("⚙️ إعدادات النظام واللغة | System Settings & Language", expanded=False):
+    # تغيير اللغة
+    lang = st.radio("🌐 لغة الواجهة / Interface Language:", ["العربية", "English"], horizontal=True)
+    st.markdown("---")
+    
+    # إعدادات الحساسية بجوار بعضها
+    col_s1, col_s2 = st.columns(2)
+    with col_s1:
+        person_conf = st.slider("دقة رصد الأشخاص | Person Conf:", 0.1, 1.0, 0.30, 0.05)
+    with col_s2:
+        ppe_conf = st.slider("دقة رصد معدات السلامة | PPE Conf:", 0.1, 1.0, 0.40, 0.05)
+# ---------------------------------------------------------------------------------
 
+# قاموس الترجمة بناءً على اختيار المستخدم
 if lang == "العربية":
     t = {
         "title": "🛡️ نظام الرصد الآلي للسلامة المهنية (Dual-AI)",
@@ -56,12 +63,7 @@ if lang == "العربية":
         "alert_danger": "⚠️ **حالة طوارئ:** تم رصد ({}) بدون خوذة، و ({}) بدون سترة!",
         "alert_safe": "✅ **امتثال تام:** الموقع مطابق لاشتراطات السلامة.",
         "btn_combined_dl": "📥 تحميل حزمة التقرير (صورة + تقرير نصي)",
-        "index_title": "📈 مؤشر أمان الموقع",
-        "sidebar_title": "⚙️ إعدادات النظام",
-        "sidebar_info": "يستخدم هذا النظام معمارية (Dual-Model) وحسابات (IoA) لضمان أعلى درجات الرصد.",
-        "adv_settings": "🛠️ إعدادات الحساسية المتقدمة",
-        "conf_person": "دقة رصد الأشخاص:",
-        "conf_ppe": "دقة رصد معدات السلامة:"
+        "index_title": "📈 مؤشر أمان الموقع"
     }
 else:
     t = {
@@ -80,24 +82,8 @@ else:
         "alert_danger": "⚠️ **EMERGENCY:** Detected ({}) without helmet, and ({}) without vest!",
         "alert_safe": "✅ **100% COMPLIANT:** Site meets all safety standards.",
         "btn_combined_dl": "📥 Download Report Package (Image + Text)",
-        "index_title": "📈 Site Safety Index",
-        "sidebar_title": "⚙️ System Settings",
-        "sidebar_info": "System uses Dual-Model architecture & IoA math for high precision.",
-        "adv_settings": "🛠️ Advanced Sensitivity",
-        "conf_person": "Person Detection Confidence:",
-        "conf_ppe": "PPE Detection Confidence:"
+        "index_title": "📈 Site Safety Index"
     }
-
-# ----------------- تصميم القائمة الجانبية الاحترافي -----------------
-st.sidebar.title(t["sidebar_title"])
-st.sidebar.info(t["sidebar_info"])
-
-# وضع الإعدادات المعقدة داخل قائمة منسدلة لترتيب شكل الشريط الجانبي
-with st.sidebar.expander(t["adv_settings"]):
-    person_conf = st.slider(t["conf_person"], 0.1, 1.0, 0.30, 0.05)
-    ppe_conf = st.slider(t["conf_ppe"], 0.1, 1.0, 0.40, 0.05)
-
-st.sidebar.markdown("---")
 
 @st.cache_resource
 def load_models():
@@ -228,10 +214,8 @@ if uploaded_file is not None:
             else:
                 st.success(t["alert_safe"])
 
-            # ----------------- التقرير النصي الديناميكي و دمج الملفات في ZIP -----------------
             now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             
-            # تحديد لغة التقرير النصي حسب اختيار المستخدم
             if lang == "العربية":
                 report_text = f"""
                 ========================================
@@ -265,18 +249,13 @@ if uploaded_file is not None:
                 System: Dual-AI IoA Architecture
                 """
             
-            # تحويل الصورة إلى بايتات
             is_success, img_buffer = cv2.imencode(".jpg", cv2.cvtColor(res_plotted_rgb, cv2.COLOR_RGB2BGR))
             
-            # إنشاء ملف ZIP في الذاكرة الوهمية (Memory)
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-                # إضافة الصورة داخل ملف الـ ZIP
                 zip_file.writestr("AI_Detection_Image.jpg", img_buffer.tobytes())
-                # إضافة التقرير النصي داخل ملف الـ ZIP (مع ترميز utf-8 ليدعم العربي)
                 zip_file.writestr("Safety_Report.txt", report_text.encode('utf-8'))
             
-            # زر واحد أنيق ومدمج بالمنتصف
             col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
             with col_btn2:
                 st.download_button(
@@ -284,5 +263,5 @@ if uploaded_file is not None:
                     data=zip_buffer.getvalue(),
                     file_name="HSE_Report_Package.zip",
                     mime="application/zip",
-                    use_container_width=True # لتكبير الزر وجعله بارزاً
+                    use_container_width=True
                 )
